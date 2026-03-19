@@ -14,6 +14,9 @@ const ticketOptions: TicketOption[] = [
     categoryCode: "open",
     categoryName: "Open",
     displayLabel: "2026-05-16 (토) / Men Singles / Open",
+    sourceSelector: {
+      textMustInclude: ["men singles", "open"],
+    },
   },
   {
     id: "ticket-men-pro-sat",
@@ -26,6 +29,9 @@ const ticketOptions: TicketOption[] = [
     categoryCode: "pro",
     categoryName: "Pro",
     displayLabel: "2026-05-16 (토) / Pro Men / Pro",
+    sourceSelector: {
+      textMustInclude: ["pro men", "pro"],
+    },
   },
   {
     id: "ticket-mixed-open-sun",
@@ -38,6 +44,9 @@ const ticketOptions: TicketOption[] = [
     categoryCode: "open",
     categoryName: "Open",
     displayLabel: "2026-05-17 (일) / Mixed Doubles / Open",
+    sourceSelector: {
+      textMustInclude: ["mixed doubles", "open"],
+    },
   },
 ];
 

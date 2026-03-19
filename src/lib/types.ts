@@ -11,6 +11,12 @@ export type TicketOption = {
   categoryCode: string;
   categoryName: string;
   displayLabel: string;
+  sourceSelector?: {
+    url?: string;
+    textMustInclude?: string[];
+    soldOutText?: string[];
+    availableText?: string[];
+  } | null;
 };
 
 export type EventSummary = {
@@ -41,4 +47,12 @@ export type AppUser = {
   email: string;
   name: string | null;
   createdAt: string;
+};
+
+export type TicketObservation = {
+  ticketOptionId: string;
+  status: TicketStatus;
+  method: "fetch" | "playwright" | "mock";
+  signal: string;
+  matchedText?: string;
 };

@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-import type { EventSummary, TicketStatus, WatcherWithOption } from "@/lib/types";
+import type { EventSummary, TicketOption, TicketStatus, WatcherWithOption } from "@/lib/types";
 import { hasDatabaseUrl } from "@/lib/env";
 import {
   addWatcher as addMockWatcher,
@@ -63,6 +63,10 @@ function mapEventRecord(event: EventRecord): EventSummary {
       categoryCode: option.categoryCode,
       categoryName: option.categoryName,
       displayLabel: option.displayLabel,
+      sourceSelector:
+        option.sourceSelector && typeof option.sourceSelector === "object"
+          ? (option.sourceSelector as TicketOption["sourceSelector"])
+          : null,
     })),
   };
 }
@@ -86,6 +90,10 @@ function mapWatcherRecord(watcher: WatcherRecord): WatcherWithOption {
       categoryCode: watcher.ticketOption.categoryCode,
       categoryName: watcher.ticketOption.categoryName,
       displayLabel: watcher.ticketOption.displayLabel,
+      sourceSelector:
+        watcher.ticketOption.sourceSelector && typeof watcher.ticketOption.sourceSelector === "object"
+          ? (watcher.ticketOption.sourceSelector as TicketOption["sourceSelector"])
+          : null,
     },
   };
 }

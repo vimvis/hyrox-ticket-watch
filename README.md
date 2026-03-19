@@ -18,6 +18,7 @@ HYROX sold-out ticket monitoring service for members.
 - 쿠키 세션 기반 데모 인증 흐름
 - `DATABASE_URL` 존재 시 Prisma 경유, 없으면 mock fallback
 - 모니터링 실행 서비스 / 이메일 큐 인터페이스 분리
+- HYROX 수집기 fetch 우선, Playwright fallback 구조
 
 ## Getting Started
 
@@ -60,6 +61,12 @@ npm run db:seed
 
 현재 API는 DB 미연결 상태에서도 화면 개발이 가능하도록 mock 모드로 응답합니다.
 
+브라우저 기반 수집 정확도를 높이려면 필요 시 Playwright 브라우저를 설치합니다.
+
+```bash
+npx playwright install chromium
+```
+
 ## Vercel
 
 Vercel 배포 전 준비:
@@ -74,11 +81,13 @@ npx vercel
 - `DATABASE_URL`  설정 시 Prisma 데이터 모드로 전환
 - `CRON_SECRET`  추후 모니터링 작업 보호용
 - `RESEND_API_KEY`  설정 시 실제 이메일 공급자 연동 준비
+- `HYROX_MONITOR_TIMEOUT_MS`
+- `HYROX_MONITOR_URL_OVERRIDE`  티켓 URL 강제 override가 필요할 때 사용
 
 ## Next Steps
 
 - Prisma 실제 연결
 - 로그인 세션 구현
 - 관심 티켓 CRUD UI 연결
-- Playwright 수집기 추가
+- Playwright 수집기 정확도 개선
 - Resend 이메일 발송 연결
