@@ -67,6 +67,14 @@ npm run db:seed
 npx playwright install chromium
 ```
 
+실제 페이지 요청/응답과 렌더링 텍스트를 점검하려면 진단 스크립트를 실행합니다.
+
+```bash
+npm run diagnose:hyrox
+```
+
+결과는 `tmp/hyrox-diagnostics/` 아래에 저장됩니다.
+
 ## Vercel
 
 Vercel 배포 전 준비:
