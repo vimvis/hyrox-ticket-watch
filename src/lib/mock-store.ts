@@ -1,66 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { hashSync } from "bcryptjs";
-import type { AppUser, EventSummary, TicketOption, Watcher, WatcherWithOption } from "@/lib/types";
+import type { AppUser, EventSummary, Watcher, WatcherWithOption } from "@/lib/types";
+import { hyroxIncheonEvent, hyroxIncheonTicketOptions } from "@/lib/hyrox-config";
 
-const ticketOptions: TicketOption[] = [
-  {
-    id: "ticket-men-open-sat",
-    eventId: "event-hyrox-incheon",
-    eventName: "HYROX Incheon",
-    eventDate: "2026-05-16",
-    weekdayLabel: "토",
-    divisionCode: "men-singles",
-    divisionName: "Men Singles",
-    categoryCode: "open",
-    categoryName: "Open",
-    displayLabel: "2026-05-16 (토) / Men Singles / Open",
-    sourceSelector: {
-      textMustInclude: ["men singles", "open"],
-    },
-  },
-  {
-    id: "ticket-men-pro-sat",
-    eventId: "event-hyrox-incheon",
-    eventName: "HYROX Incheon",
-    eventDate: "2026-05-16",
-    weekdayLabel: "토",
-    divisionCode: "pro-men",
-    divisionName: "Pro Men",
-    categoryCode: "pro",
-    categoryName: "Pro",
-    displayLabel: "2026-05-16 (토) / Pro Men / Pro",
-    sourceSelector: {
-      textMustInclude: ["pro men", "pro"],
-    },
-  },
-  {
-    id: "ticket-mixed-open-sun",
-    eventId: "event-hyrox-incheon",
-    eventName: "HYROX Incheon",
-    eventDate: "2026-05-17",
-    weekdayLabel: "일",
-    divisionCode: "mixed-doubles",
-    divisionName: "Mixed Doubles",
-    categoryCode: "open",
-    categoryName: "Open",
-    displayLabel: "2026-05-17 (일) / Mixed Doubles / Open",
-    sourceSelector: {
-      textMustInclude: ["mixed doubles", "open"],
-    },
-  },
-];
-
-const events: EventSummary[] = [
-  {
-    id: "event-hyrox-incheon",
-    slug: "hyrox-incheon",
-    name: "HYROX Incheon",
-    location: "Incheon, KR",
-    eventUrl: "https://hyrox.com/event/hyrox-incheon/",
-    ticketUrl: "https://korea.hyrox.com/event/airasia-hyrox-incheon-season-25-26-h48hij?useEmbed=true",
-    ticketOptions,
-  },
-];
+const ticketOptions = hyroxIncheonTicketOptions;
+const events: EventSummary[] = [hyroxIncheonEvent];
 
 const users: AppUser[] = [
   {

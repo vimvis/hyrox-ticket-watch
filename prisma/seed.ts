@@ -1,44 +1,51 @@
 import { PrismaClient } from "@prisma/client";
 import { hashSync } from "bcryptjs";
 
+import { hyroxIncheonEvent, hyroxIncheonTicketOptions } from "@/lib/hyrox-config";
+
 const prisma = new PrismaClient();
 
 async function main() {
   const passwordHash = hashSync("password123", 10);
 
   const event = await prisma.event.upsert({
-    where: { slug: "hyrox-incheon" },
+    where: { slug: hyroxIncheonEvent.slug },
     update: {},
     create: {
-      slug: "hyrox-incheon",
-      name: "HYROX Incheon",
-      eventUrl: "https://hyrox.com/event/hyrox-incheon/",
-      ticketUrl: "https://korea.hyrox.com/event/airasia-hyrox-incheon-season-25-26-h48hij?useEmbed=true",
-      location: "Incheon, KR",
+      slug: hyroxIncheonEvent.slug,
+      name: hyroxIncheonEvent.name,
+      eventUrl: hyroxIncheonEvent.eventUrl,
+      ticketUrl: hyroxIncheonEvent.ticketUrl,
+      location: hyroxIncheonEvent.location,
       startDate: new Date("2026-05-15"),
       endDate: new Date("2026-05-17"),
     },
   });
 
+  const menSingles = hyroxIncheonTicketOptions[0];
+  const proMen = hyroxIncheonTicketOptions[1];
+  const mixedDoubles = hyroxIncheonTicketOptions[2];
+
   await prisma.ticketOption.upsert({
     where: {
       eventId_eventDate_divisionCode_categoryCode: {
         eventId: event.id,
         eventDate: new Date("2026-05-16"),
-        divisionCode: "men-singles",
-        categoryCode: "open",
+        divisionCode: menSingles.divisionCode,
+        categoryCode: menSingles.categoryCode,
       },
     },
     update: {},
     create: {
       eventId: event.id,
       eventDate: new Date("2026-05-16"),
-      weekdayLabel: "토",
-      divisionCode: "men-singles",
-      divisionName: "Men Singles",
-      categoryCode: "open",
-      categoryName: "Open",
-      displayLabel: "2026-05-16 (토) / Men Singles / Open",
+      weekdayLabel: menSingles.weekdayLabel,
+      divisionCode: menSingles.divisionCode,
+      divisionName: menSingles.divisionName,
+      categoryCode: menSingles.categoryCode,
+      categoryName: menSingles.categoryName,
+      displayLabel: menSingles.displayLabel,
+      sourceSelector: menSingles.sourceSelector ?? undefined,
     },
   });
 
@@ -47,20 +54,21 @@ async function main() {
       eventId_eventDate_divisionCode_categoryCode: {
         eventId: event.id,
         eventDate: new Date("2026-05-16"),
-        divisionCode: "pro-men",
-        categoryCode: "pro",
+        divisionCode: proMen.divisionCode,
+        categoryCode: proMen.categoryCode,
       },
     },
     update: {},
     create: {
       eventId: event.id,
       eventDate: new Date("2026-05-16"),
-      weekdayLabel: "토",
-      divisionCode: "pro-men",
-      divisionName: "Pro Men",
-      categoryCode: "pro",
-      categoryName: "Pro",
-      displayLabel: "2026-05-16 (토) / Pro Men / Pro",
+      weekdayLabel: proMen.weekdayLabel,
+      divisionCode: proMen.divisionCode,
+      divisionName: proMen.divisionName,
+      categoryCode: proMen.categoryCode,
+      categoryName: proMen.categoryName,
+      displayLabel: proMen.displayLabel,
+      sourceSelector: proMen.sourceSelector ?? undefined,
     },
   });
 
@@ -69,20 +77,21 @@ async function main() {
       eventId_eventDate_divisionCode_categoryCode: {
         eventId: event.id,
         eventDate: new Date("2026-05-17"),
-        divisionCode: "mixed-doubles",
-        categoryCode: "open",
+        divisionCode: mixedDoubles.divisionCode,
+        categoryCode: mixedDoubles.categoryCode,
       },
     },
     update: {},
     create: {
       eventId: event.id,
       eventDate: new Date("2026-05-17"),
-      weekdayLabel: "일",
-      divisionCode: "mixed-doubles",
-      divisionName: "Mixed Doubles",
-      categoryCode: "open",
-      categoryName: "Open",
-      displayLabel: "2026-05-17 (일) / Mixed Doubles / Open",
+      weekdayLabel: mixedDoubles.weekdayLabel,
+      divisionCode: mixedDoubles.divisionCode,
+      divisionName: mixedDoubles.divisionName,
+      categoryCode: mixedDoubles.categoryCode,
+      categoryName: mixedDoubles.categoryName,
+      displayLabel: mixedDoubles.displayLabel,
+      sourceSelector: mixedDoubles.sourceSelector ?? undefined,
     },
   });
 
