@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { getEvents } from "@/lib/mock-store";
+import { getEvents } from "@/lib/data-store";
 
 export async function GET() {
-  return NextResponse.json({
-    mode: "mock",
-    items: getEvents(),
-  });
+  const result = await getEvents();
+
+  return NextResponse.json(result);
 }

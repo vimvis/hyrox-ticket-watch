@@ -2,7 +2,7 @@ import { compare } from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { findUserByEmail, getStoredPasswordHash } from "@/lib/mock-store";
+import { findUserByEmail, getStoredPasswordHash } from "@/lib/data-store";
 import { createSessionCookieValue, sessionCookieName } from "@/lib/session";
 import { loginSchema } from "@/lib/validation";
 
@@ -21,8 +21,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = findUserByEmail(parsed.data.email);
-  const storedPasswordHash = getStoredPasswordHash(parsed.data.email);
+  const user = await findUserByEmail(parsed.data.email);
+  const storedPasswordHash = await getStoredPasswordHash(parsed.data.email);
 
   if (!user || !storedPasswordHash) {
     return NextResponse.json(
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({
-    mode: "mock",
+    mode: "session",
     user,
     session: {
       token: `cookie-session-${user.id}`,

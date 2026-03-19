@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { addWatcher, getWatchers } from "@/lib/mock-store";
+import { addWatcher, getWatchers } from "@/lib/data-store";
 import { createWatcherSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const userId = url.searchParams.get("userId") ?? "user-demo";
 
-  return NextResponse.json({
-    mode: "mock",
-    items: getWatchers(userId),
-  });
+  const result = await getWatchers(userId);
+
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {
@@ -27,13 +26,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const watcher = addWatcher(parsed.data);
+  const watcher = await addWatcher(parsed.data);
 
   return NextResponse.json(
-    {
-      mode: "mock",
-      item: watcher,
-    },
+    watcher,
     { status: 201 },
   );
 }

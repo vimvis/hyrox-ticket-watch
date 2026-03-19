@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { hashPassword } from "@/lib/auth";
-import { createUser, findUserByEmail } from "@/lib/mock-store";
+import { createUser, findUserByEmail } from "@/lib/data-store";
 import { createSessionCookieValue, sessionCookieName } from "@/lib/session";
 import { registerSchema } from "@/lib/validation";
 
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const existingUser = findUserByEmail(parsed.data.email);
+  const existingUser = await findUserByEmail(parsed.data.email);
 
   if (existingUser) {
     return NextResponse.json(
@@ -33,11 +33,12 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
-  const user = createUser({
+  const result = await createUser({
     email: parsed.data.email,
     name: parsed.data.name,
     passwordHash,
   });
+  const user = result.user;
 
   const sessionValue = createSessionCookieValue({
     userId: user.id,
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      mode: "mock",
+      mode: result.mode,
       user,
       credentials: {
         passwordStored: true,

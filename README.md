@@ -16,6 +16,8 @@ HYROX sold-out ticket monitoring service for members.
 - Prisma 스키마 초안
 - 이메일 알림 MVP를 위한 데이터 구조
 - 쿠키 세션 기반 데모 인증 흐름
+- `DATABASE_URL` 존재 시 Prisma 경유, 없으면 mock fallback
+- 모니터링 실행 서비스 / 이메일 큐 인터페이스 분리
 
 ## Getting Started
 
@@ -53,6 +55,7 @@ DB 연결 후 사용할 명령:
 ```bash
 npm run db:generate
 npm run db:push
+npm run db:seed
 ```
 
 현재 API는 DB 미연결 상태에서도 화면 개발이 가능하도록 mock 모드로 응답합니다.
@@ -68,9 +71,9 @@ npx vercel
 배포 환경변수로 아래 항목을 넣습니다.
 
 - `SESSION_SECRET`
-- `DATABASE_URL`  현재는 추후 실제 DB 연결용
+- `DATABASE_URL`  설정 시 Prisma 데이터 모드로 전환
 - `CRON_SECRET`  추후 모니터링 작업 보호용
-- `RESEND_API_KEY`  추후 이메일 발송용
+- `RESEND_API_KEY`  설정 시 실제 이메일 공급자 연동 준비
 
 ## Next Steps
 

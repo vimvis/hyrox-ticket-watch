@@ -8,12 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
     "next": "16.2.0",
+    "pg": "^8.20.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.3.6"
@@ -25,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "prisma": "^7.5.0",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
