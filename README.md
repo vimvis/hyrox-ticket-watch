@@ -5,13 +5,17 @@ HYROX sold-out ticket monitoring service for members.
 현재 포함된 범위:
 
 - Next.js App Router 기반 웹앱
-- 회원용 대시보드 첫 화면
+- 회원용 인터랙티브 대시보드
 - `GET /api/events`
 - `GET /api/watchers`
 - `POST /api/watchers`
 - `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
 - Prisma 스키마 초안
 - 이메일 알림 MVP를 위한 데이터 구조
+- 쿠키 세션 기반 데모 인증 흐름
 
 ## Getting Started
 
@@ -38,6 +42,8 @@ npm run dev
 cp .env.example .env
 ```
 
+로컬/배포 환경에서 `SESSION_SECRET`은 반드시 교체하는 것을 권장합니다.
+
 ## Database
 
 Prisma 스키마는 `prisma/schema.prisma` 에 있습니다.
@@ -50,6 +56,21 @@ npm run db:push
 ```
 
 현재 API는 DB 미연결 상태에서도 화면 개발이 가능하도록 mock 모드로 응답합니다.
+
+## Vercel
+
+Vercel 배포 전 준비:
+
+```bash
+npx vercel
+```
+
+배포 환경변수로 아래 항목을 넣습니다.
+
+- `SESSION_SECRET`
+- `DATABASE_URL`  현재는 추후 실제 DB 연결용
+- `CRON_SECRET`  추후 모니터링 작업 보호용
+- `RESEND_API_KEY`  추후 이메일 발송용
 
 ## Next Steps
 
