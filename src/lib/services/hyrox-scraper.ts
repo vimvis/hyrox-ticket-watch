@@ -1,5 +1,8 @@
 import { getHyroxMonitorTimeoutMs, getHyroxMonitorUrlOverride } from "@/lib/env";
-import { extractVivenuTicketsFromNextData } from "@/lib/services/vivenu-next-data";
+import {
+  extractVivenuTicketsFromNextData,
+  matchVivenuTicketForOption,
+} from "@/lib/services/vivenu-next-data";
 import type { TicketObservation, TicketOption } from "@/lib/types";
 
 const SOLD_OUT_SIGNALS = ["sold out", "soldout", "unavailable", "waitlist only"];
@@ -30,13 +33,6 @@ function extractVivenuEventId(input: string) {
 function extractNextDataJson(input: string) {
   const match = input.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   return match?.[1] ?? null;
-}
-
-function buildVivenuTicketNeedles(option: TicketOption) {
-  const dayWord =
-    option.weekdayLabel === "토" ? "saturday" : option.weekdayLabel === "일" ? "sunday" : "friday";
-
-  return [option.divisionName, option.categoryName, dayWord].map(normalizeText);
 }
 
 function buildNeedles(option: TicketOption) {
@@ -173,10 +169,7 @@ export async function scrapeHyroxTicketAvailability(
         ticketOptionId: option.id,
         ...(() => {
           const detected = detectStatusFromText(text, option);
-          const ticketNeedles = buildVivenuTicketNeedles(option);
-          const matchedVivenuTicket = vivenuTickets.find((ticket) =>
-            ticketNeedles.every((needle) => normalizeText(ticket.name).includes(needle)),
-          );
+          const matchedVivenuTicket = matchVivenuTicketForOption(option, vivenuTickets);
 
           if (
             detected.status === "unknown" &&

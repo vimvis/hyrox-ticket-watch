@@ -16,6 +16,8 @@ export type TicketOption = {
     textMustInclude?: string[];
     soldOutText?: string[];
     availableText?: string[];
+    vivenuNameIncludes?: string[];
+    vivenuNameExcludes?: string[];
   } | null;
 };
 

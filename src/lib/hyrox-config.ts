@@ -20,6 +20,8 @@ export const hyroxIncheonTicketOptions: TicketOption[] = [
       textMustInclude: ["airasia | hyrox incheon | season 25/26", "songdo convensia", "05/15/2026"],
       soldOutText: ["sold out", "soldout", "unavailable"],
       availableText: ["buy now", "book now", "register now", "add to cart"],
+      vivenuNameIncludes: ["hyrox men", "남자 오픈", "saturday"],
+      vivenuNameExcludes: ["pro", "doubles"],
     },
   },
   {
@@ -38,6 +40,8 @@ export const hyroxIncheonTicketOptions: TicketOption[] = [
       textMustInclude: ["airasia | hyrox incheon | season 25/26", "songdo convensia", "05/15/2026"],
       soldOutText: ["sold out", "soldout", "unavailable"],
       availableText: ["buy now", "book now", "register now", "add to cart"],
+      vivenuNameIncludes: ["hyrox pro men", "남자 프로", "saturday"],
+      vivenuNameExcludes: ["doubles"],
     },
   },
   {
@@ -56,6 +60,8 @@ export const hyroxIncheonTicketOptions: TicketOption[] = [
       textMustInclude: ["airasia | hyrox incheon | season 25/26", "songdo convensia", "05/17/2026"],
       soldOutText: ["sold out", "soldout", "unavailable"],
       availableText: ["buy now", "book now", "register now", "add to cart"],
+      vivenuNameIncludes: ["mixed", "open", "sunday"],
+      vivenuNameExcludes: ["men", "women", "pro"],
     },
   },
 ];

@@ -19,6 +19,7 @@ HYROX sold-out ticket monitoring service for members.
 - `DATABASE_URL` 존재 시 Prisma 경유, 없으면 mock fallback
 - 모니터링 실행 서비스 / 이메일 큐 인터페이스 분리
 - HYROX 수집기 fetch 우선, Playwright fallback 구조
+- vivenu `__NEXT_DATA__` 기반 티켓 정의 추출과 옵션별 이름 매칭
 
 ## Getting Started
 

@@ -1,4 +1,6 @@
-type VivenuTicket = {
+import type { TicketOption } from "@/lib/types";
+
+export type VivenuTicket = {
   id: string;
   name: string;
   active?: boolean;
@@ -11,6 +13,30 @@ type VivenuTicket = {
     end?: string;
   };
 };
+
+function normalizeSearchText(input: string) {
+  return input
+    .toLowerCase()
+    .replace(/[|/_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getDefaultDayWord(option: TicketOption) {
+  if (option.weekdayLabel === "토") {
+    return "saturday";
+  }
+
+  if (option.weekdayLabel === "일") {
+    return "sunday";
+  }
+
+  return "friday";
+}
+
+function getFallbackIncludes(option: TicketOption) {
+  return [option.divisionName, option.categoryName, getDefaultDayWord(option)];
+}
 
 function walkForTickets(value: unknown, found: VivenuTicket[]) {
   if (!value) {
@@ -83,4 +109,47 @@ export function extractVivenuTicketsFromNextData(nextDataJson: string) {
   } catch {
     return [];
   }
+}
+
+export function matchVivenuTicketForOption(option: TicketOption, tickets: VivenuTicket[]) {
+  const includes = (
+    option.sourceSelector?.vivenuNameIncludes?.length
+      ? option.sourceSelector.vivenuNameIncludes
+      : getFallbackIncludes(option)
+  )
+    .map(normalizeSearchText)
+    .filter(Boolean);
+  const excludes = (option.sourceSelector?.vivenuNameExcludes ?? [])
+    .map(normalizeSearchText)
+    .filter(Boolean);
+
+  const scored = tickets
+    .map((ticket) => {
+      const normalizedName = normalizeSearchText(ticket.name);
+      const includeMatches = includes.filter((needle) => normalizedName.includes(needle));
+      const excludeMatches = excludes.filter((needle) => normalizedName.includes(needle));
+
+      let score = includeMatches.length * 10;
+      if (normalizedName.includes(getDefaultDayWord(option))) {
+        score += 2;
+      }
+      if (ticket.active) {
+        score += 1;
+      }
+      if (ticket.conditionalAvailability === false) {
+        score += 1;
+      }
+      score -= excludeMatches.length * 20;
+
+      return {
+        ticket,
+        score,
+        includeMatches,
+        excludeMatches,
+      };
+    })
+    .filter((entry) => entry.includeMatches.length > 0 && entry.excludeMatches.length === 0)
+    .sort((left, right) => right.score - left.score);
+
+  return scored[0]?.ticket ?? null;
 }
