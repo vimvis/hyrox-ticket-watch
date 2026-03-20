@@ -1,4 +1,5 @@
 import { getHyroxMonitorTimeoutMs, getHyroxMonitorUrlOverride } from "@/lib/env";
+import { extractVivenuTicketsFromNextData } from "@/lib/services/vivenu-next-data";
 import type { TicketObservation, TicketOption } from "@/lib/types";
 
 const SOLD_OUT_SIGNALS = ["sold out", "soldout", "unavailable", "waitlist only"];
@@ -24,6 +25,18 @@ function extractVivenuEventId(input: string) {
 
   const jsonMatch = input.match(/"id":"([a-z0-9]{24})"/i);
   return jsonMatch?.[1] ?? null;
+}
+
+function extractNextDataJson(input: string) {
+  const match = input.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  return match?.[1] ?? null;
+}
+
+function buildVivenuTicketNeedles(option: TicketOption) {
+  const dayWord =
+    option.weekdayLabel === "토" ? "saturday" : option.weekdayLabel === "일" ? "sunday" : "friday";
+
+  return [option.divisionName, option.categoryName, dayWord].map(normalizeText);
 }
 
 function buildNeedles(option: TicketOption) {
@@ -149,6 +162,8 @@ export async function scrapeHyroxTicketAvailability(
     const html = await fetchTicketPage(pageUrl);
     const text = stripHtml(html);
     const eventId = extractVivenuEventId(html);
+    const nextDataJson = extractNextDataJson(html);
+    const vivenuTickets = nextDataJson ? extractVivenuTicketsFromNextData(nextDataJson) : [];
     const availabilitySummary = eventId ? await fetchAvailabilitySummary(eventId).catch(() => null) : null;
 
     return {
@@ -158,6 +173,10 @@ export async function scrapeHyroxTicketAvailability(
         ticketOptionId: option.id,
         ...(() => {
           const detected = detectStatusFromText(text, option);
+          const ticketNeedles = buildVivenuTicketNeedles(option);
+          const matchedVivenuTicket = vivenuTickets.find((ticket) =>
+            ticketNeedles.every((needle) => normalizeText(ticket.name).includes(needle)),
+          );
 
           if (
             detected.status === "unknown" &&
@@ -166,7 +185,10 @@ export async function scrapeHyroxTicketAvailability(
             return {
               ...detected,
               status: "sold_out" as const,
-              signal: "availability-checkout-blocked",
+              signal: matchedVivenuTicket
+                ? `availability-checkout-blocked:${matchedVivenuTicket.id}`
+                : "availability-checkout-blocked",
+              matchedText: matchedVivenuTicket?.name ?? detected.matchedText,
             };
           }
 
@@ -176,7 +198,18 @@ export async function scrapeHyroxTicketAvailability(
           ) {
             return {
               ...detected,
-              signal: "availability-checkout-allowed",
+              signal: matchedVivenuTicket
+                ? `availability-checkout-allowed:${matchedVivenuTicket.id}`
+                : "availability-checkout-allowed",
+              matchedText: matchedVivenuTicket?.name ?? detected.matchedText,
+            };
+          }
+
+          if (matchedVivenuTicket) {
+            return {
+              ...detected,
+              signal: `ticket-definition-found:${matchedVivenuTicket.id}`,
+              matchedText: matchedVivenuTicket.name,
             };
           }
 

@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { chromium } from "playwright";
 
+import { extractVivenuTicketsFromNextData } from "../src/lib/services/vivenu-next-data";
+
 const targetUrl =
   process.env.HYROX_MONITOR_URL_OVERRIDE ||
   "https://korea.hyrox.com/event/airasia-hyrox-incheon-season-25-26-h48hij?useEmbed=true";
@@ -76,6 +78,7 @@ async function main() {
   const title = await page.title();
   const nextDataJson =
     (await page.locator('script#__NEXT_DATA__').first().textContent().catch(() => null)) ?? "";
+  const extractedTickets = extractVivenuTicketsFromNextData(nextDataJson);
 
   await browser.close();
 
@@ -103,6 +106,7 @@ async function main() {
   await writeFile(path.join(outputDir, "body.txt"), bodyText);
   await writeFile(path.join(outputDir, "body.html"), bodyHtml);
   await writeFile(path.join(outputDir, "next-data.json"), nextDataJson);
+  await writeFile(path.join(outputDir, "tickets.json"), JSON.stringify(extractedTickets, null, 2));
 
   console.log(`HYROX diagnostics written to ${outputDir}`);
 }
