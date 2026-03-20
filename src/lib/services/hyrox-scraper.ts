@@ -15,6 +15,17 @@ function stripHtml(input: string) {
     .replace(/<[^>]+>/g, " ");
 }
 
+function extractVivenuEventId(input: string) {
+  const apiMatch = input.match(/api\/public\/events\/([a-z0-9]+)\/availabilities/i);
+
+  if (apiMatch?.[1]) {
+    return apiMatch[1];
+  }
+
+  const jsonMatch = input.match(/"id":"([a-z0-9]{24})"/i);
+  return jsonMatch?.[1] ?? null;
+}
+
 function buildNeedles(option: TicketOption) {
   const selectorHints = option.sourceSelector?.textMustInclude ?? [];
 
@@ -85,6 +96,26 @@ async function fetchTicketPage(url: string) {
   }
 }
 
+async function fetchAvailabilitySummary(eventId: string) {
+  const response = await fetch(`https://vivenu.com/api/public/events/${eventId}/availabilities`, {
+    headers: {
+      "user-agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`availability-fetch-failed-${response.status}`);
+  }
+
+  return (await response.json()) as {
+    checkout?: {
+      allowed?: boolean;
+    };
+  };
+}
+
 async function tryPlaywrightText(url: string) {
   try {
     const playwright = await import("playwright");
@@ -117,13 +148,40 @@ export async function scrapeHyroxTicketAvailability(
   try {
     const html = await fetchTicketPage(pageUrl);
     const text = stripHtml(html);
+    const eventId = extractVivenuEventId(html);
+    const availabilitySummary = eventId ? await fetchAvailabilitySummary(eventId).catch(() => null) : null;
 
     return {
       mode: "fetch",
       pageUrl,
       observations: options.map((option) => ({
         ticketOptionId: option.id,
-        ...detectStatusFromText(text, option),
+        ...(() => {
+          const detected = detectStatusFromText(text, option);
+
+          if (
+            detected.status === "unknown" &&
+            availabilitySummary?.checkout?.allowed === false
+          ) {
+            return {
+              ...detected,
+              status: "sold_out" as const,
+              signal: "availability-checkout-blocked",
+            };
+          }
+
+          if (
+            detected.status === "unknown" &&
+            availabilitySummary?.checkout?.allowed === true
+          ) {
+            return {
+              ...detected,
+              signal: "availability-checkout-allowed",
+            };
+          }
+
+          return detected;
+        })(),
       })),
     };
   } catch (fetchError) {

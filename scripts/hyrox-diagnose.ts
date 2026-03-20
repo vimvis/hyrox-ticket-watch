@@ -15,6 +15,12 @@ async function main() {
   const page = await browser.newPage();
   const requests: Array<{ method: string; url: string; resourceType: string }> = [];
   const responses: Array<{ status: number; url: string; contentType: string | null }> = [];
+  const interestingBodies: Array<{
+    url: string;
+    status: number;
+    contentType: string | null;
+    body: string;
+  }> = [];
 
   page.on("request", (request) => {
     requests.push({
@@ -25,11 +31,37 @@ async function main() {
   });
 
   page.on("response", async (response) => {
+    const contentType = response.headers()["content-type"] ?? null;
+    const url = response.url();
+
     responses.push({
       status: response.status(),
-      url: response.url(),
-      contentType: response.headers()["content-type"] ?? null,
+      url,
+      contentType,
     });
+
+    if (
+      url.includes("/availabilities") ||
+      url.includes("/web/api/") ||
+      response.request().resourceType() === "fetch" ||
+      response.request().resourceType() === "xhr"
+    ) {
+      try {
+        interestingBodies.push({
+          url,
+          status: response.status(),
+          contentType,
+          body: await response.text(),
+        });
+      } catch {
+        interestingBodies.push({
+          url,
+          status: response.status(),
+          contentType,
+          body: "[unreadable-response-body]",
+        });
+      }
+    }
   });
 
   await page.goto(targetUrl, {
@@ -42,6 +74,8 @@ async function main() {
   const bodyText = await page.locator("body").innerText();
   const bodyHtml = await page.locator("body").innerHTML();
   const title = await page.title();
+  const nextDataJson =
+    (await page.locator('script#__NEXT_DATA__').first().textContent().catch(() => null)) ?? "";
 
   await browser.close();
 
@@ -62,8 +96,13 @@ async function main() {
 
   await writeFile(path.join(outputDir, "requests.json"), JSON.stringify(requests, null, 2));
   await writeFile(path.join(outputDir, "responses.json"), JSON.stringify(responses, null, 2));
+  await writeFile(
+    path.join(outputDir, "interesting-bodies.json"),
+    JSON.stringify(interestingBodies, null, 2),
+  );
   await writeFile(path.join(outputDir, "body.txt"), bodyText);
   await writeFile(path.join(outputDir, "body.html"), bodyHtml);
+  await writeFile(path.join(outputDir, "next-data.json"), nextDataJson);
 
   console.log(`HYROX diagnostics written to ${outputDir}`);
 }
