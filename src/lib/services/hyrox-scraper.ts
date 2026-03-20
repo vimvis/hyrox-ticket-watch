@@ -1,7 +1,11 @@
+import type { Page } from "playwright";
+
 import { getHyroxMonitorTimeoutMs, getHyroxMonitorUrlOverride } from "@/lib/env";
 import {
+  extractVivenuEventIdFromNextData,
   extractVivenuTicketsFromNextData,
   matchVivenuTicketForOption,
+  type VivenuTicket,
 } from "@/lib/services/vivenu-next-data";
 import type { TicketObservation, TicketOption } from "@/lib/types";
 
@@ -144,6 +148,171 @@ async function tryPlaywrightText(url: string) {
   }
 }
 
+function buildCheckoutUrl(pageUrl: string, eventId: string) {
+  return new URL(`/checkout/${eventId}`, pageUrl).toString();
+}
+
+function inferCheckoutCategory(option: TicketOption) {
+  if (option.divisionCode.includes("doubles")) {
+    return "Doubles";
+  }
+
+  if (option.divisionCode.includes("relay")) {
+    return "Relay";
+  }
+
+  if (option.divisionCode.includes("spectator")) {
+    return "Spectator";
+  }
+
+  return "Singles";
+}
+
+function inferCheckoutClass(option: TicketOption) {
+  if (option.categoryCode.includes("pro")) {
+    return "Pro";
+  }
+
+  if (option.categoryCode.includes("open")) {
+    return "Open";
+  }
+
+  return null;
+}
+
+function inferCheckoutGender(option: TicketOption) {
+  if (option.divisionCode.includes("mixed")) {
+    return "Mixed";
+  }
+
+  if (option.divisionCode.includes("women")) {
+    return "Women";
+  }
+
+  if (option.divisionCode.includes("men")) {
+    return "Men";
+  }
+
+  return null;
+}
+
+async function clickIfPresent(page: Page, role: "button" | "link", label: string) {
+  const locator =
+    role === "button"
+      ? page.getByRole("button", { name: new RegExp(`^${label}$`, "i") })
+      : page.getByRole("link", { name: new RegExp(label, "i") });
+
+  if (!(await locator.count())) {
+    return false;
+  }
+
+  await locator.first().click().catch(() => null);
+  await page.waitForTimeout(2000);
+  return true;
+}
+
+async function inspectPreciseCheckoutStatus(
+  checkoutUrl: string,
+  option: TicketOption,
+  matchedTicket: VivenuTicket,
+): Promise<Omit<TicketObservation, "ticketOptionId"> | null> {
+  try {
+    const playwright = await import("playwright");
+    const browser = await playwright.chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.goto(checkoutUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: getHyroxMonitorTimeoutMs(),
+    });
+    await page.waitForTimeout(4000);
+
+    const acceptAllButton = page.getByRole("button", { name: /accept all/i });
+    if (await acceptAllButton.count()) {
+      await acceptAllButton.first().click().catch(() => null);
+      await page.waitForTimeout(1000);
+    }
+
+    await clickIfPresent(page, "link", inferCheckoutCategory(option));
+
+    const classLabel = inferCheckoutClass(option);
+    if (classLabel) {
+      await clickIfPresent(page, "button", classLabel);
+    }
+
+    const genderLabel = inferCheckoutGender(option);
+    if (genderLabel) {
+      await clickIfPresent(page, "button", genderLabel);
+    }
+
+    const bodyText = await page.locator("body").innerText();
+    const buttons = await page.locator("button").evaluateAll((elements) =>
+      elements.map((element) => ({
+        text: (element.textContent ?? "").trim(),
+        ariaLabel: element.getAttribute("aria-label"),
+      })),
+    );
+
+    await browser.close();
+
+    const normalizedBody = normalizeText(bodyText);
+    const normalizedTicketName = normalizeText(matchedTicket.name);
+    const exactAddButton = buttons.find((button) =>
+      normalizeText(button.ariaLabel ?? "").includes(
+        normalizeText(`add 1 ${matchedTicket.name}`),
+      ),
+    );
+    const exactRemoveButton = buttons.find((button) =>
+      normalizeText(button.ariaLabel ?? "").includes(
+        normalizeText(`remove 1 ${matchedTicket.name}`),
+      ),
+    );
+    const hasExactTicket = normalizedBody.includes(normalizedTicketName);
+    const hasSoldOut = normalizedBody.includes("sold out");
+
+    if (exactAddButton) {
+      return {
+        status: "available",
+        method: "playwright",
+        signal: `checkout-add-available:${matchedTicket.id}`,
+        matchedText: matchedTicket.name,
+      };
+    }
+
+    if (hasExactTicket && hasSoldOut && !exactRemoveButton) {
+      return {
+        status: "sold_out",
+        method: "playwright",
+        signal: `checkout-ticket-sold-out:${matchedTicket.id}`,
+        matchedText: matchedTicket.name,
+      };
+    }
+
+    if (hasExactTicket) {
+      return {
+        status: "unknown",
+        method: "playwright",
+        signal: `checkout-ticket-found:${matchedTicket.id}`,
+        matchedText: matchedTicket.name,
+      };
+    }
+
+    return {
+      status: "unknown",
+      method: "playwright",
+      signal: `checkout-ticket-not-found:${matchedTicket.id}`,
+      matchedText: matchedTicket.name,
+    };
+  } catch (error) {
+    return {
+      status: "unknown",
+      method: "playwright",
+      signal: `checkout-playwright-error:${error instanceof Error ? error.message : "unknown-error"}`,
+      matchedText: matchedTicket.name,
+    };
+  }
+}
+
 export async function scrapeHyroxTicketAvailability(
   ticketUrl: string,
   options: TicketOption[],
@@ -157,25 +326,37 @@ export async function scrapeHyroxTicketAvailability(
   try {
     const html = await fetchTicketPage(pageUrl);
     const text = stripHtml(html);
-    const eventId = extractVivenuEventId(html);
     const nextDataJson = extractNextDataJson(html);
+    const eventId = extractVivenuEventId(html) ?? (nextDataJson ? extractVivenuEventIdFromNextData(nextDataJson) : null);
     const vivenuTickets = nextDataJson ? extractVivenuTicketsFromNextData(nextDataJson) : [];
     const availabilitySummary = eventId ? await fetchAvailabilitySummary(eventId).catch(() => null) : null;
+    const checkoutUrl = eventId ? buildCheckoutUrl(pageUrl, eventId) : null;
 
     return {
-      mode: "fetch",
+      mode: checkoutUrl ? "playwright" : "fetch",
       pageUrl,
-      observations: options.map((option) => ({
-        ticketOptionId: option.id,
-        ...(() => {
+      observations: await Promise.all(
+        options.map(async (option) => {
           const detected = detectStatusFromText(text, option);
           const matchedVivenuTicket = matchVivenuTicketForOption(option, vivenuTickets);
+          const preciseObservation =
+            checkoutUrl && matchedVivenuTicket
+              ? await inspectPreciseCheckoutStatus(checkoutUrl, option, matchedVivenuTicket)
+              : null;
+
+          if (preciseObservation) {
+            return {
+              ticketOptionId: option.id,
+              ...preciseObservation,
+            };
+          }
 
           if (
             detected.status === "unknown" &&
             availabilitySummary?.checkout?.allowed === false
           ) {
             return {
+              ticketOptionId: option.id,
               ...detected,
               status: "sold_out" as const,
               signal: matchedVivenuTicket
@@ -190,6 +371,7 @@ export async function scrapeHyroxTicketAvailability(
             availabilitySummary?.checkout?.allowed === true
           ) {
             return {
+              ticketOptionId: option.id,
               ...detected,
               signal: matchedVivenuTicket
                 ? `availability-checkout-allowed:${matchedVivenuTicket.id}`
@@ -200,15 +382,20 @@ export async function scrapeHyroxTicketAvailability(
 
           if (matchedVivenuTicket) {
             return {
+              ticketOptionId: option.id,
               ...detected,
-              signal: `ticket-definition-found:${matchedVivenuTicket.id}`,
+              signal:
+                `ticket-definition-found:${matchedVivenuTicket.id}`,
               matchedText: matchedVivenuTicket.name,
             };
           }
 
-          return detected;
-        })(),
-      })),
+          return {
+            ticketOptionId: option.id,
+            ...detected,
+          };
+        }),
+      ),
     };
   } catch (fetchError) {
     const playwrightText = await tryPlaywrightText(pageUrl);

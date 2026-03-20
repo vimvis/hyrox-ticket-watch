@@ -14,6 +14,45 @@ export type VivenuTicket = {
   };
 };
 
+function walkForEventId(value: unknown): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = walkForEventId(item);
+      if (nested) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
+  if (typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record._id === "string" &&
+    typeof record.sellerId === "string" &&
+    Array.isArray(record.tickets)
+  ) {
+    return record._id;
+  }
+
+  for (const entry of Object.values(record)) {
+    const nested = walkForEventId(entry);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+}
+
 function normalizeSearchText(input: string) {
   return input
     .toLowerCase()
@@ -108,6 +147,15 @@ export function extractVivenuTicketsFromNextData(nextDataJson: string) {
     return Array.from(deduped.values());
   } catch {
     return [];
+  }
+}
+
+export function extractVivenuEventIdFromNextData(nextDataJson: string) {
+  try {
+    const parsed = JSON.parse(nextDataJson) as unknown;
+    return walkForEventId(parsed);
+  } catch {
+    return null;
   }
 }
 
