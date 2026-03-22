@@ -91,6 +91,7 @@ npx vercel
 - `DATABASE_URL`  설정 시 Prisma 데이터 모드로 전환
 - `CRON_SECRET`  추후 모니터링 작업 보호용
 - `RESEND_API_KEY`  설정 시 실제 이메일 공급자 연동 준비
+- `RESEND_FROM_EMAIL`  Resend 발신자 주소
 - `HYROX_MONITOR_TIMEOUT_MS`
 - `HYROX_MONITOR_URL_OVERRIDE`  티켓 URL 강제 override가 필요할 때 사용
 

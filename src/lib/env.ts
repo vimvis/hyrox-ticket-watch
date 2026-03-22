@@ -6,6 +6,14 @@ export function hasResendApiKey() {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
+export function getResendApiKey() {
+  return process.env.RESEND_API_KEY?.trim() ?? "";
+}
+
+export function getResendFromEmail() {
+  return process.env.RESEND_FROM_EMAIL?.trim() || "HYROX Ticket Watch <onboarding@resend.dev>";
+}
+
 export function getSessionSecretStatus() {
   return process.env.SESSION_SECRET ? "configured" : "development-fallback";
 }

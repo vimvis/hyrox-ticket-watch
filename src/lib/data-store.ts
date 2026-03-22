@@ -1,15 +1,17 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import type { EventSummary, TicketOption, TicketStatus, WatcherWithOption } from "@/lib/types";
 import { hasDatabaseUrl } from "@/lib/env";
 import {
   addWatcher as addMockWatcher,
+  createNotification as createMockNotification,
   createUser as createMockUser,
   findUserByEmail as findMockUserByEmail,
   findUserById as findMockUserById,
   getEvents as getMockEvents,
   getStoredPasswordHash as getMockStoredPasswordHash,
   getWatchers as getMockWatchers,
+  updateWatcherStatus as updateMockWatcherStatus,
 } from "@/lib/mock-store";
 import { getPrismaClient } from "@/lib/prisma";
 
@@ -22,6 +24,24 @@ type CreateUserInput = {
 type CreateWatcherInput = {
   userId: string;
   ticketOptionId: string;
+};
+
+type UpdateWatcherStatusInput = {
+  watcherId: string;
+  status: TicketStatus;
+  checkedAt: string;
+  notifiedAt?: string | null;
+};
+
+type CreateNotificationInput = {
+  userId: string;
+  ticketWatcherId: string;
+  recipient: string;
+  subject: string;
+  payload: Prisma.InputJsonValue | null;
+  status: "queued" | "sent" | "failed";
+  sentAt?: string | null;
+  errorMessage?: string | null;
 };
 
 function toIsoDate(value: Date) {
@@ -323,4 +343,87 @@ export async function getStoredPasswordHash(email: string) {
   });
 
   return user?.passwordHash ?? null;
+}
+
+export async function updateWatcherStatus(input: UpdateWatcherStatusInput) {
+  if (!hasDatabaseUrl()) {
+    return {
+      mode: "mock" as const,
+      item: updateMockWatcherStatus(input),
+    };
+  }
+
+  const prisma = getPrismaClient();
+
+  if (!prisma) {
+    return {
+      mode: "mock" as const,
+      item: updateMockWatcherStatus(input),
+    };
+  }
+
+  const watcher = await prisma.ticketWatcher.update({
+    where: { id: input.watcherId },
+    data: {
+      lastKnownStatus: input.status,
+      lastCheckedAt: new Date(input.checkedAt),
+      ...(typeof input.notifiedAt !== "undefined"
+        ? {
+            lastNotifiedAt: input.notifiedAt ? new Date(input.notifiedAt) : null,
+          }
+        : {}),
+    },
+  });
+
+  return {
+    mode: "database" as const,
+    item: {
+      id: watcher.id,
+      userId: watcher.userId,
+      ticketOptionId: watcher.ticketOptionId,
+      lastKnownStatus: watcher.lastKnownStatus as TicketStatus,
+      lastCheckedAt: watcher.lastCheckedAt?.toISOString() ?? null,
+      lastNotifiedAt: watcher.lastNotifiedAt?.toISOString() ?? null,
+    },
+  };
+}
+
+export async function createNotification(input: CreateNotificationInput) {
+  if (!hasDatabaseUrl()) {
+    return {
+      mode: "mock" as const,
+      item: createMockNotification(input),
+    };
+  }
+
+  const prisma = getPrismaClient();
+
+  if (!prisma) {
+    return {
+      mode: "mock" as const,
+      item: createMockNotification(input),
+    };
+  }
+
+  const notification = await prisma.notification.create({
+    data: {
+      userId: input.userId,
+      ticketWatcherId: input.ticketWatcherId,
+      recipient: input.recipient,
+      subject: input.subject,
+      payload: input.payload ?? Prisma.JsonNull,
+      status: input.status,
+      sentAt: input.sentAt ? new Date(input.sentAt) : null,
+      errorMessage: input.errorMessage ?? null,
+    },
+  });
+
+  return {
+    mode: "database" as const,
+    item: {
+      id: notification.id,
+      status: notification.status,
+      sentAt: notification.sentAt?.toISOString() ?? null,
+    },
+  };
 }

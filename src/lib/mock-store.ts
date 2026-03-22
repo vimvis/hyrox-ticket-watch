@@ -38,6 +38,18 @@ const watchers: Watcher[] = [
   },
 ];
 
+const notifications: Array<{
+  id: string;
+  userId: string;
+  ticketWatcherId: string;
+  recipient: string;
+  subject: string;
+  payload: unknown | null;
+  status: "queued" | "sent" | "failed";
+  sentAt: string | null;
+  createdAt: string;
+}> = [];
+
 export function getEvents() {
   return events;
 }
@@ -99,4 +111,52 @@ export function findUserById(userId: string) {
 
 export function getStoredPasswordHash(email: string) {
   return userPasswordHashes.get(email.toLowerCase()) ?? null;
+}
+
+export function updateWatcherStatus(input: {
+  watcherId: string;
+  status: Watcher["lastKnownStatus"];
+  checkedAt: string;
+  notifiedAt?: string | null;
+}) {
+  const watcher = watchers.find((item) => item.id === input.watcherId);
+
+  if (!watcher) {
+    return null;
+  }
+
+  watcher.lastKnownStatus = input.status;
+  watcher.lastCheckedAt = input.checkedAt;
+
+  if (typeof input.notifiedAt !== "undefined") {
+    watcher.lastNotifiedAt = input.notifiedAt;
+  }
+
+  return watcher;
+}
+
+export function createNotification(input: {
+  userId: string;
+  ticketWatcherId: string;
+  recipient: string;
+  subject: string;
+  payload: unknown | null;
+  status: "queued" | "sent" | "failed";
+  sentAt?: string | null;
+}) {
+  const record = {
+    id: randomUUID(),
+    userId: input.userId,
+    ticketWatcherId: input.ticketWatcherId,
+    recipient: input.recipient,
+    subject: input.subject,
+    payload: input.payload,
+    status: input.status,
+    sentAt: input.sentAt ?? null,
+    createdAt: new Date().toISOString(),
+  };
+
+  notifications.unshift(record);
+
+  return record;
 }
